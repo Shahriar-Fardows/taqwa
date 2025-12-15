@@ -1,6 +1,6 @@
-import { NextResponse } from "next/server";
-import mongoose, { Schema } from "mongoose";
-import { connectDB } from "@/lib/db";
+import { NextResponse } from "next/server"
+import mongoose, { Schema } from "mongoose"
+import { connectDB } from "@/lib/db"
 
 // Create schema directly here
 const ContactSchema = new Schema(
@@ -16,35 +16,31 @@ const ContactSchema = new Schema(
       default: {},
     },
   },
-  { timestamps: true }
-);
+  { timestamps: true },
+)
 
 // Prevent re-registering model in Next.js
-const Contact =
-  mongoose.models.Contact || mongoose.model("Contact", ContactSchema);
+const Contact = mongoose.models.Contact || mongoose.model("Contact", ContactSchema)
 
 /* ============================
    GET ALL CONTACTS
 ============================ */
 export async function GET() {
-  await connectDB();
-  const contacts = await Contact.find();
-  return NextResponse.json({ success: true, data: contacts });
+  await connectDB()
+  const contacts = await Contact.find()
+  return NextResponse.json({ success: true, data: contacts })
 }
 
 /* ============================
    CREATE A NEW CONTACT
 ============================ */
 export async function POST(req: Request) {
-  await connectDB();
-  const body = await req.json();
-  const { email, phone, address, social } = body;
+  await connectDB()
+  const body = await req.json()
+  const { email, phone, address, social } = body
 
   if (!email || !phone) {
-    return NextResponse.json(
-      { success: false, message: "Email and phone are required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ success: false, message: "Email and phone are required" }, { status: 400 })
   }
 
   const newContact = await Contact.create({
@@ -52,58 +48,69 @@ export async function POST(req: Request) {
     phone,
     address: address || "",
     social: social || {},
-  });
+  })
 
   return NextResponse.json({
     success: true,
     message: "Contact created",
     data: newContact,
-  });
+  })
 }
 
 /* ============================
    UPDATE CONTACT
 ============================ */
 export async function PUT(req: Request) {
-  await connectDB();
-  const body = await req.json();
-  const { id, ...updates } = body;
+  await connectDB()
+  const body = await req.json()
+  const { id, email, phone, address, social } = body
 
-  const updated = await Contact.findByIdAndUpdate(id, updates, { new: true });
+  if (!id) {
+    return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 })
+  }
+
+  const updated = await Contact.findByIdAndUpdate(
+    id,
+    {
+      email,
+      phone,
+      address,
+      social: social || {},
+    },
+    { new: true },
+  )
 
   if (!updated) {
-    return NextResponse.json(
-      { success: false, message: "Contact not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ success: false, message: "Contact not found" }, { status: 404 })
   }
 
   return NextResponse.json({
     success: true,
     message: "Contact updated",
     data: updated,
-  });
+  })
 }
 
 /* ============================
    DELETE CONTACT
 ============================ */
 export async function DELETE(req: Request) {
-  await connectDB();
-  const body = await req.json();
-  const { id } = body;
+  await connectDB()
+  const body = await req.json()
+  const { id } = body
 
-  const deleted = await Contact.findByIdAndDelete(id);
+  if (!id) {
+    return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 })
+  }
+
+  const deleted = await Contact.findByIdAndDelete(id)
 
   if (!deleted) {
-    return NextResponse.json(
-      { success: false, message: "Contact not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ success: false, message: "Contact not found" }, { status: 404 })
   }
 
   return NextResponse.json({
     success: true,
     message: "Contact deleted",
-  });
+  })
 }
