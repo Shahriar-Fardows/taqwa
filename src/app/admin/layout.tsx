@@ -38,7 +38,7 @@ export default function AdminLayout({
         <SidebarProvider>
           <Sidebar>
             <SidebarHeader className="border-b p-4">
-              <h2 className="text-xl font-bold text-yellow-400">Admin Panel</h2>
+              <h2 className="text-xl font-bold ">Admin Panel</h2>
             </SidebarHeader>
 
             <SidebarContent>
