@@ -110,6 +110,19 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+@layer utilities {
+  .islamic-pattern {
+    background-color: #020817;
+    background-image: radial-gradient(#10b981 1px, transparent 1px);
+    background-size: 30px 30px;
+    opacity: 0.8;
+  }
+  .text-gold {
+    color: #ffd700;
+  }
+}
+
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
