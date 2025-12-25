@@ -27,6 +27,7 @@ import {
   FileSignature,
   HelpCircle,
   Sparkles,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,6 +40,7 @@ const menuItems = [
   { title: "Blog", href: "/admin/blog", icon: FileText },
   { title: "Media", href: "/admin/media", icon: Video },
   { title: "Business", href: "/admin/business", icon: Briefcase },
+  { title: "Events", href: "/admin/event", icon: Calendar },
   { title: "Review", href: "/admin/review", icon: Star },
   { title: "Contract", href: "/admin/contract", icon: FileSignature },
   { title: "FAQ", href: "/admin/faq", icon: HelpCircle },

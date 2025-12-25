@@ -8,39 +8,25 @@ import { connectDB } from "@/lib/db"
 const EventSchema = new Schema(
   {
     title: { type: String, required: true },
-    slug: { type: String, required: true, unique: true }, // URL er jonno unique nam (ex: tech-summit-2024)
-    description: { type: String, required: true }, // Markdown support korbe
-    
-    // Cloudinary Image URL
+    slug: { type: String, required: true, unique: true },
+    description: { type: String, required: true },
     image: { type: String, default: "" },
-
-    // Date and Time (ISO Format: 2024-12-25T10:00:00.000Z)
     startDate: { type: Date, required: true },
     endDate: { type: Date },
-
-    // Location (Object akare rakhlam jate details rakha jay)
     location: {
-      address: { type: String, default: "" }, // Hall name, Street info
+      address: { type: String, default: "" },
       city: { type: String, default: "" },
-      mapLink: { type: String, default: "" }, // Google Map URL
+      mapLink: { type: String, default: "" },
     },
-
-    // Ticket Information
-    price: { type: Number, default: 0 }, // 0 hole Free
+    price: { type: Number, default: 0 },
     currency: { type: String, default: "BDT" },
-    registrationLink: { type: String, default: "" }, // Ticket kenar link
-
-    // Organizer Details
+    registrationLink: { type: String, default: "" },
     organizer: { type: String, default: "Admin" },
-    
-    // Status: Event ki hoye geche naki samne hobe
     status: { 
       type: String, 
       enum: ["upcoming", "ongoing", "completed", "cancelled"], 
       default: "upcoming" 
     },
-
-    // Extra Flexible Data (Speaker list, Agenda, ba ja khushi rakhte paro)
     extraInfo: { type: Schema.Types.Mixed }, 
   },
   { timestamps: true }
@@ -56,14 +42,13 @@ export async function GET(req: Request) {
   await connectDB()
   try {
     const { searchParams } = new URL(req.url)
-    const status = searchParams.get("status") // status diye filter kora jabe
+    const status = searchParams.get("status")
 
     let query = {}
     if (status) {
       query = { status: status }
     }
 
-    // Sort by startDate ascending (Samner event age dekhabe)
     const events = await Event.find(query).sort({ startDate: 1 })
     
     return NextResponse.json({ success: true, count: events.length, data: events })
@@ -87,7 +72,6 @@ export async function POST(req: Request) {
       organizer, status, extraInfo 
     } = body
 
-    // Basic Validation
     if (!title || !startDate || !location) {
       return NextResponse.json(
         { success: false, message: "Title, Date, and Location are required" },
@@ -95,7 +79,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // Duplicate Slug Check
     const existingEvent = await Event.findOne({ slug })
     if (existingEvent) {
       return NextResponse.json({ success: false, message: "Slug already exists" }, { status: 400 })
@@ -106,7 +89,7 @@ export async function POST(req: Request) {
       slug,
       description,
       image: image || "",
-      startDate: new Date(startDate), // String theke Date object e convert
+      startDate: new Date(startDate),
       endDate: endDate ? new Date(endDate) : null,
       location: location || {},
       price: price || 0,
@@ -114,7 +97,7 @@ export async function POST(req: Request) {
       registrationLink: registrationLink || "",
       organizer: organizer || "Admin",
       status: status || "upcoming",
-      extraInfo: extraInfo || {}, // Speaker details ba onno kichu
+      extraInfo: extraInfo || {},
     })
 
     return NextResponse.json({
@@ -135,7 +118,7 @@ export async function PUT(req: Request) {
   await connectDB()
   try {
     const body = await req.json()
-    const { id, ...updateData } = body // ID alada kore baki sob data update er jonno nilam
+    const { id, ...updateData } = body
 
     if (!id) {
       return NextResponse.json({ success: false, message: "Event ID is required" }, { status: 400 })

@@ -30,18 +30,35 @@ const ExperienceSchema = new Schema({
 /* ================= Main Schema ================= */
 
 const AboutSchema = new Schema({
-  name: String,
-  designation: String,
-  tagline: String,
-  description: String,
-  imageUrl: String,
+  // Basic Info
+  name: { type: String, default: "" },
+  designation: { type: String, default: "" },
+  tagline: { type: String, default: "" },
+  description: { type: String, default: "" },
+  imageUrl: { type: String, default: "" },
+  
+  // === NEW HERO SECTION FIELDS ===
+  heroTitle: { type: String, default: "জ্ঞান ও আমলের আলোকিত পথচলা" }, // বড় হেডলাইন
+  
+  stats: {
+    lectures: { type: String, default: "৫০০+" },
+    followers: { type: String, default: "৫০k+" },
+    experience: { type: String, default: "১০+" }
+  },
+
+  dailyQuote: {
+    title: { type: String, default: "আজকের আয়াত" },
+    text: { type: String, default: "তোমাদের মধ্যে তারাই উত্তম যারা কুরআন শেখে এবং শেখায়।" }
+  },
+  // ===============================
+
   skills: [String],
   experiences: [ExperienceSchema],
   team: [TeamSchema],
 }, { timestamps: true });
 
-const About =
-  mongoose.models.About || mongoose.model("About", AboutSchema);
+// Prevent model overwrite
+const About = mongoose.models.About || mongoose.model("About", AboutSchema);
 
 /* ================= GET ================= */
 
@@ -56,6 +73,9 @@ export async function GET() {
         tagline: "",
         description: "",
         imageUrl: "",
+        heroTitle: "", // Default
+        stats: { lectures: "", followers: "", experience: "" }, // Default
+        dailyQuote: { title: "", text: "" }, // Default
         skills: [],
         experiences: [],
         team: [],
@@ -63,7 +83,7 @@ export async function GET() {
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false },
+      { success: false, message: "Error fetching data" },
       { status: 500 }
     );
   }
@@ -87,8 +107,9 @@ export async function PUT(req: { json: () => any; }) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
+    console.error("Update Error:", error);
     return NextResponse.json(
-      { success: false },
+      { success: false, message: "Error updating data" },
       { status: 500 }
     );
   }

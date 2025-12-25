@@ -20,25 +20,34 @@ const menuLinks = [
 export function Navbar() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [phoneNumber, setPhoneNumber] = useState("") 
+  const [siteInfo, setSiteInfo] = useState({
+    phone: "",
+    logo: "",
+    siteName: ""
+  })
   const pathname = usePathname()
 
-  // API থেকে ফোন নম্বর আনা
+  // --- 1. API থেকে ডাটা আনা (Logo, SiteName, Phone) ---
   useEffect(() => {
-    const fetchContactInfo = async () => {
+    const fetchSiteInfo = async () => {
       try {
         const res = await axios.get("/api/contact")
         if (res.data.success && res.data.data.length > 0) {
-          setPhoneNumber(res.data.data[0].phone)
+          const data = res.data.data[0]
+          setSiteInfo({
+            phone: data.phone || "",
+            logo: data.logo || "",
+            siteName: data.siteName || ""
+          })
         }
       } catch (error) {
-        console.error("Failed to fetch contact info", error)
+        console.error("Failed to fetch site info", error)
       }
     }
-    fetchContactInfo()
+    fetchSiteInfo()
   }, [])
 
-  // স্ক্রল ইফেক্ট
+  // --- 2. স্ক্রল ইফেক্ট ---
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener("scroll", handleScroll)
@@ -57,18 +66,48 @@ export function Navbar() {
       >
         <div className="container mx-auto flex items-center justify-between px-6">
           
-          {/* লোগো */}
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-lg shadow-emerald-500/20">
-                <BookOpen className="text-white h-6 w-6" />
-            </div>
-            <div className="flex flex-col">
-                <span className="text-xl font-bold text-white leading-none tracking-wide">স্কলার পোর্টফোলিও</span>
-                <span className="text-[10px] text-emerald-400 font-medium tracking-widest uppercase">ইসলামিক শিক্ষা ও গবেষণা</span>
-            </div>
+          {/* --- লোগো সেকশন --- */}
+          <Link href="/" className="flex items-center gap-3 group">
+            
+            {/* কন্ডিশন: লোগো থাকলে ইমেজ, না থাকলে ডিফল্ট আইকন */}
+            {siteInfo.logo ? (
+                <div className="relative h-12 w-auto min-w-[40px] overflow-hidden rounded-lg">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                        src={siteInfo.logo} 
+                        alt="Logo" 
+                        className="h-full w-full object-contain" 
+                    />
+                </div>
+            ) : (
+                <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-lg shadow-emerald-500/20">
+                    <BookOpen className="text-white h-6 w-6" />
+                </div>
+            )}
+
+            {/* সাইট নেম বা টেক্সট */}
+            {!siteInfo.logo && (
+                <div className="flex flex-col">
+                    <span className="text-xl font-bold text-white leading-none tracking-wide">
+                        {siteInfo.siteName || "স্কলার পোর্টফোলিও"}
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-medium tracking-widest uppercase mt-1">
+                        ইসলামিক শিক্ষা ও গবেষণা
+                    </span>
+                </div>
+            )}
+            
+            {/* যদি লোগো থাকে এবং সাইট নেমও থাকে, তবে সাইট নেম দেখাবে কিনা তা আপনার ইচ্ছা। 
+                সাধারণত লোগো থাকলে টেক্সট দরকার হয় না, তবে চাইলে নিচের কোডটি রাখতে পারেন: */}
+            {siteInfo.logo && siteInfo.siteName && (
+                 <span className="text-xl font-bold text-white leading-none tracking-wide hidden md:block">
+                    {siteInfo.siteName}
+                 </span>
+            )}
+
           </Link>
 
-          {/* ডেস্কটপ মেনু */}
+          {/* --- ডেস্কটপ মেনু --- */}
           <div className="hidden md:flex items-center gap-8">
             {menuLinks.map((link) => (
               <Link
@@ -88,13 +127,13 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* বাটন */}
+          {/* --- বাটন (ফোন নম্বর সহ) --- */}
           <div className="hidden md:block">
-            {phoneNumber ? (
+            {siteInfo.phone ? (
                 <Button asChild className="bg-transparent border border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400 hover:text-emerald-300 rounded-full px-6 transition-all">
-                  <a href={`tel:${phoneNumber}`} className="flex items-center gap-2">
+                  <a href={`tel:${siteInfo.phone}`} className="flex items-center gap-2">
                     <Phone className="h-4 w-4" />
-                    <span>{phoneNumber}</span>
+                    <span>{siteInfo.phone}</span>
                   </a>
                 </Button>
             ) : (
@@ -106,7 +145,7 @@ export function Navbar() {
             )}
           </div>
 
-          {/* মোবাইল হ্যামবার্গার */}
+          {/* --- মোবাইল হ্যামবার্গার --- */}
           <button 
             onClick={() => setIsDrawerOpen(true)} 
             className="md:hidden p-2 text-white hover:bg-white/10 rounded-full transition-colors"
@@ -157,6 +196,14 @@ export function Navbar() {
         </div>
 
         <div className="p-6 border-t border-white/10 bg-black/20">
+          {siteInfo.phone && (
+             <Button asChild className="w-full bg-white/5 text-emerald-400 hover:bg-white/10 hover:text-emerald-300 mb-3 border border-emerald-500/30">
+               <a href={`tel:${siteInfo.phone}`} className="flex items-center justify-center gap-2">
+                 <Phone className="h-4 w-4" />
+                 <span>{siteInfo.phone}</span>
+               </a>
+             </Button>
+          )}
           <Link href="/contact" onClick={() => setIsDrawerOpen(false)}>
             <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white h-12 text-lg">
                 <Calendar className="mr-2 h-5 w-5" /> এপয়েন্টমেন্ট নিন

@@ -23,7 +23,8 @@ import {
   Plus,
   Loader2,
   TrendingUp,
-  Activity
+  Activity,
+  Calendar
 } from "lucide-react"
 
 // --- TYPES FOR DASHBOARD DATA ---
@@ -35,6 +36,8 @@ interface DashboardData {
   totalClients: number
   totalMedia: number
   teamMembers: number
+  totalEvents: number      // New
+  upcomingEvents: number   // New
   recentBlogs: any[]
   recentReviews: any[]
 }
@@ -48,6 +51,8 @@ export default function DashboardHome() {
     totalClients: 0,
     totalMedia: 0,
     teamMembers: 0,
+    totalEvents: 0,       // New
+    upcomingEvents: 0,    // New
     recentBlogs: [],
     recentReviews: []
   })
@@ -57,48 +62,55 @@ export default function DashboardHome() {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        // Parallel API Calls for performance
-        const [blogRes, reviewRes, businessRes, mediaRes, aboutRes] = await Promise.allSettled([
+        // Parallel API Calls
+        const [blogRes, reviewRes, businessRes, mediaRes, aboutRes, eventRes] = await Promise.allSettled([
           axios.get("/api/blogs"),
           axios.get("/api/review"),
           axios.get("/api/business"),
           axios.get("/api/media"),
-          axios.get("/api/about")
+          axios.get("/api/about"),
+          axios.get("/api/event") // Event API Added
         ])
 
         const newData = { ...data }
 
-        // 1. BLOGS DATA
+        // 1. BLOGS
         if (blogRes.status === "fulfilled" && blogRes.value.data.success) {
           const blogs = blogRes.value.data.data
           newData.totalBlogs = blogs.length
           newData.publishedBlogs = blogs.filter((b: any) => b.isPublished).length
-          newData.recentBlogs = blogs.slice(0, 3) // Top 3 recent
+          newData.recentBlogs = blogs.slice(0, 3)
         }
 
-        // 2. REVIEWS DATA
+        // 2. REVIEWS
         if (reviewRes.status === "fulfilled" && reviewRes.value.data.success) {
           const reviews = reviewRes.value.data.data
           newData.totalReviews = reviews.length
-          // Calculate Average Rating
           const totalRating = reviews.reduce((acc: number, r: any) => acc + r.rating, 0)
           newData.averageRating = reviews.length > 0 ? Number((totalRating / reviews.length).toFixed(1)) : 0
           newData.recentReviews = reviews.slice(0, 3)
         }
 
-        // 3. BUSINESS DATA
+        // 3. BUSINESS
         if (businessRes.status === "fulfilled" && businessRes.value.data.success) {
           newData.totalClients = businessRes.value.data.data.length
         }
 
-        // 4. MEDIA DATA
+        // 4. MEDIA
         if (mediaRes.status === "fulfilled" && mediaRes.value.data.success) {
           newData.totalMedia = mediaRes.value.data.data.length
         }
 
-        // 5. TEAM DATA (From About)
+        // 5. TEAM (About)
         if (aboutRes.status === "fulfilled" && aboutRes.value.data) {
           newData.teamMembers = aboutRes.value.data.team?.length || 0
+        }
+
+        // 6. EVENTS [New Logic]
+        if (eventRes.status === "fulfilled" && eventRes.value.data.success) {
+            const events = eventRes.value.data.data
+            newData.totalEvents = events.length
+            newData.upcomingEvents = events.filter((e: any) => e.status === "upcoming").length
         }
 
         setData(newData)
@@ -110,7 +122,7 @@ export default function DashboardHome() {
     }
 
     fetchAllData()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
@@ -130,6 +142,12 @@ export default function DashboardHome() {
           <p className="text-gray-400 mt-1">Welcome back! Here&apos;s what&apos;s happening with your portfolio.</p>
         </div>
         <div className="flex gap-3">
+          {/* New Event Button */}
+          <Link href="/admin/event">
+             <Button variant="outline" className="border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white">
+                <Calendar className="mr-2 h-4 w-4" /> New Event
+             </Button>
+          </Link>
           <Link href="/admin/blog">
             <Button className="bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
               <Plus className="mr-2 h-4 w-4" /> New Blog
@@ -138,8 +156,8 @@ export default function DashboardHome() {
         </div>
       </div>
 
-      {/* --- STATS CARDS --- */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* --- STATS CARDS (Grid Updated to 5 Columns for Large Screens) --- */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         
         {/* Total Blogs */}
         <Card className="bg-[#0f172a] border-white/10 hover:border-emerald-500/30 transition-all">
@@ -150,48 +168,62 @@ export default function DashboardHome() {
           <CardContent>
             <div className="text-2xl font-bold text-white">{data.totalBlogs}</div>
             <p className="text-xs text-gray-500 mt-1">
-              {data.publishedBlogs} Published • {data.totalBlogs - data.publishedBlogs} Drafts
+              {data.publishedBlogs} Published
             </p>
             <Progress value={(data.publishedBlogs / (data.totalBlogs || 1)) * 100} className="h-1 mt-3 bg-white/5" />
+          </CardContent>
+        </Card>
+
+        {/* Events [NEW CARD] */}
+        <Card className="bg-[#0f172a] border-white/10 hover:border-emerald-500/30 transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-400">Events</CardTitle>
+            <Calendar className="h-4 w-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-white">{data.totalEvents}</div>
+            <p className="text-xs text-gray-500 mt-1">
+               <span className="text-orange-400 font-bold">{data.upcomingEvents}</span> Upcoming Programs
+            </p>
           </CardContent>
         </Card>
 
         {/* Clients */}
         <Card className="bg-[#0f172a] border-white/10 hover:border-emerald-500/30 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Total Clients</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-400">Clients</CardTitle>
             <Briefcase className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">{data.totalClients}</div>
-            <p className="text-xs text-gray-500 mt-1">Companies you worked with</p>
+            <p className="text-xs text-gray-500 mt-1">Active Collaborations</p>
           </CardContent>
         </Card>
 
         {/* Reviews */}
         <Card className="bg-[#0f172a] border-white/10 hover:border-emerald-500/30 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Client Rating</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-400">Rating</CardTitle>
             <Star className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white flex items-center gap-2">
-              {data.averageRating} <span className="text-sm text-yellow-500 font-normal">/ 5.0</span>
+              {data.averageRating}
             </div>
-            <p className="text-xs text-gray-500 mt-1">Based on {data.totalReviews} reviews</p>
+            <p className="text-xs text-gray-500 mt-1">From {data.totalReviews} reviews</p>
           </CardContent>
         </Card>
 
-        {/* Media & Team */}
+        {/* Media */}
         <Card className="bg-[#0f172a] border-white/10 hover:border-emerald-500/30 transition-all">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">Media & Team</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-400">Media</CardTitle>
             <ImageIcon className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-white">{data.totalMedia}</div>
             <p className="text-xs text-gray-500 mt-1">
-              Files uploaded • {data.teamMembers} Team Members
+              Files uploaded
             </p>
           </CardContent>
         </Card>
@@ -240,7 +272,7 @@ export default function DashboardHome() {
           </CardContent>
         </Card>
 
-        {/* RIGHT: Recent Reviews & Quick Links (3 cols) */}
+        {/* RIGHT: Reviews & Quick Status (3 cols) */}
         <div className="col-span-3 space-y-6">
             
             {/* Recent Reviews */}
@@ -265,7 +297,6 @@ export default function DashboardHome() {
                                             <span className="text-sm font-medium text-white">{review.name}</span>
                                         </div>
                                         <div className="flex text-yellow-500">
-                                            {/* Show just one star and the number */}
                                             <Star className="h-3 w-3 fill-yellow-500" />
                                             <span className="text-xs ml-1">{review.rating}.0</span>
                                         </div>
@@ -283,7 +314,7 @@ export default function DashboardHome() {
                 </CardContent>
             </Card>
 
-            {/* Quick Actions / System Health */}
+            {/* Quick Status (UPDATED WITH EVENTS) */}
             <Card className="bg-emerald-900/10 border-emerald-500/20">
                 <CardHeader>
                     <CardTitle className="text-emerald-500 flex items-center gap-2 text-base">
@@ -295,13 +326,14 @@ export default function DashboardHome() {
                         <div className="text-2xl font-bold text-white">{data.teamMembers}</div>
                         <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">Team Members</div>
                     </div>
+                    {/* Events Added Here */}
                     <div className="bg-[#0f172a] p-3 rounded-lg border border-white/5 text-center">
-                        <div className="text-2xl font-bold text-white">{data.totalMedia}</div>
-                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">Gallery Items</div>
+                        <div className="text-2xl font-bold text-white">{data.upcomingEvents}</div>
+                        <div className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">Upcoming Events</div>
                     </div>
-                    <Link href="/admin/media" className="col-span-2">
+                    <Link href="/admin/event" className="col-span-2">
                         <Button variant="outline" className="w-full border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white">
-                            Manage Gallery
+                            Manage Events
                         </Button>
                     </Link>
                 </CardContent>

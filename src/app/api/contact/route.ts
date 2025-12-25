@@ -1,116 +1,154 @@
-import { NextResponse } from "next/server"
-import mongoose, { Schema } from "mongoose"
-import { connectDB } from "@/lib/db"
+import { NextResponse } from "next/server";
+import mongoose, { Schema } from "mongoose";
+import { connectDB } from "@/lib/db";
 
-// Create schema directly here
+// ==============================
+// 1. CONTACT SCHEMA DEFINITION
+// ==============================
 const ContactSchema = new Schema(
   {
+    // Branding Fields
+    siteName: { type: String, default: "" },
+    logo: { type: String, default: "" }, // Image URL string
+
+    // Contact Info
     email: { type: String, required: true },
     phone: { type: String, required: true },
     address: { type: String, default: "" },
 
-    // Multiple social media links
+    // Social Links (Flexible Map)
     social: {
       type: Map,
       of: String,
       default: {},
     },
   },
-  { timestamps: true },
-)
+  { timestamps: true }
+);
 
-// Prevent re-registering model in Next.js
-const Contact = mongoose.models.Contact || mongoose.model("Contact", ContactSchema)
+// Mongoose Model (Prevent overwrite error)
+const Contact = mongoose.models.Contact || mongoose.model("Contact", ContactSchema);
 
-/* ============================
-   GET ALL CONTACTS
-============================ */
+// ==============================
+// 2. GET METHOD (Fetch Data)
+// ==============================
 export async function GET() {
-  await connectDB()
-  const contacts = await Contact.find()
-  return NextResponse.json({ success: true, data: contacts })
+  await connectDB();
+  try {
+    // সবসময় লেটেস্ট ডাটা আনবে
+    const contacts = await Contact.find().sort({ createdAt: -1 });
+    return NextResponse.json({ success: true, data: contacts });
+  } catch (error) {
+    console.error("GET Error:", error);
+    return NextResponse.json({ success: false, message: "Error fetching data" }, { status: 500 });
+  }
 }
 
-/* ============================
-   CREATE A NEW CONTACT
-============================ */
+// ==============================
+// 3. POST METHOD (Create New)
+// ==============================
 export async function POST(req: Request) {
-  await connectDB()
-  const body = await req.json()
-  const { email, phone, address, social } = body
+  await connectDB();
+  try {
+    const body = await req.json(); // JSON Data Accept Korbe
+    const { siteName, logo, email, phone, address, social } = body;
 
-  if (!email || !phone) {
-    return NextResponse.json({ success: false, message: "Email and phone are required" }, { status: 400 })
-  }
+    // Validation
+    if (!email || !phone) {
+      return NextResponse.json(
+        { success: false, message: "Email and Phone are required" },
+        { status: 400 }
+      );
+    }
 
-  const newContact = await Contact.create({
-    email,
-    phone,
-    address: address || "",
-    social: social || {},
-  })
-
-  return NextResponse.json({
-    success: true,
-    message: "Contact created",
-    data: newContact,
-  })
-}
-
-/* ============================
-   UPDATE CONTACT
-============================ */
-export async function PUT(req: Request) {
-  await connectDB()
-  const body = await req.json()
-  const { id, email, phone, address, social } = body
-
-  if (!id) {
-    return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 })
-  }
-
-  const updated = await Contact.findByIdAndUpdate(
-    id,
-    {
+    // Create Entry
+    const newContact = await Contact.create({
+      siteName: siteName || "",
+      logo: logo || "",
       email,
       phone,
-      address,
+      address: address || "",
       social: social || {},
-    },
-    { new: true },
-  )
+    });
 
-  if (!updated) {
-    return NextResponse.json({ success: false, message: "Contact not found" }, { status: 404 })
+    return NextResponse.json({
+      success: true,
+      message: "Contact created successfully",
+      data: newContact,
+    });
+  } catch (error) {
+    console.error("POST Error:", error);
+    return NextResponse.json({ success: false, message: "Error creating contact" }, { status: 500 });
   }
-
-  return NextResponse.json({
-    success: true,
-    message: "Contact updated",
-    data: updated,
-  })
 }
 
-/* ============================
-   DELETE CONTACT
-============================ */
+// ==============================
+// 4. PUT METHOD (Update Existing)
+// ==============================
+export async function PUT(req: Request) {
+  await connectDB();
+  try {
+    const body = await req.json(); // JSON Data Accept Korbe
+    const { id, siteName, logo, email, phone, address, social } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: "ID is required for update" }, { status: 400 });
+    }
+
+    // Update Query
+    const updatedContact = await Contact.findByIdAndUpdate(
+      id,
+      {
+        siteName,
+        logo,
+        email,
+        phone,
+        address,
+        social, // Full object replace hobe
+      },
+      { new: true } // Updated data return korbe
+    );
+
+    if (!updatedContact) {
+      return NextResponse.json({ success: false, message: "Contact not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Contact updated successfully",
+      data: updatedContact,
+    });
+  } catch (error) {
+    console.error("PUT Error:", error);
+    return NextResponse.json({ success: false, message: "Error updating contact" }, { status: 500 });
+  }
+}
+
+// ==============================
+// 5. DELETE METHOD (Remove)
+// ==============================
 export async function DELETE(req: Request) {
-  await connectDB()
-  const body = await req.json()
-  const { id } = body
+  await connectDB();
+  try {
+    const body = await req.json();
+    const { id } = body;
 
-  if (!id) {
-    return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 })
+    if (!id) {
+      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
+    }
+
+    const deleted = await Contact.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return NextResponse.json({ success: false, message: "Contact not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Contact deleted successfully",
+    });
+  } catch (error) {
+    console.error("DELETE Error:", error);
+    return NextResponse.json({ success: false, message: "Error deleting contact" }, { status: 500 });
   }
-
-  const deleted = await Contact.findByIdAndDelete(id)
-
-  if (!deleted) {
-    return NextResponse.json({ success: false, message: "Contact not found" }, { status: 404 })
-  }
-
-  return NextResponse.json({
-    success: true,
-    message: "Contact deleted",
-  })
 }

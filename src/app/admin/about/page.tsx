@@ -27,6 +27,9 @@ import {
   Instagram,
   Youtube,
   Link as LinkIcon,
+  LayoutTemplate, // New Icon
+  Quote, // New Icon
+  BarChart // New Icon
 } from "lucide-react"
 
 // --- Interfaces ---
@@ -54,6 +57,7 @@ interface Experience {
   description: string
 }
 
+// Updated Interface with Hero Section Fields
 interface AboutData {
   _id?: string
   name: string
@@ -61,6 +65,19 @@ interface AboutData {
   tagline: string
   description: string
   imageUrl: string
+  
+  // New Hero Fields
+  heroTitle: string
+  stats: {
+    lectures: string
+    followers: string
+    experience: string
+  }
+  dailyQuote: {
+    title: string
+    text: string
+  }
+
   skills: string[]
   experiences: Experience[]
   team: TeamMember[]
@@ -73,6 +90,9 @@ const initialData: AboutData = {
   tagline: "",
   description: "",
   imageUrl: "",
+  heroTitle: "",
+  stats: { lectures: "", followers: "", experience: "" },
+  dailyQuote: { title: "", text: "" },
   skills: [],
   experiences: [],
   team: []
@@ -121,7 +141,13 @@ export default function AdminAbout() {
       setIsDataLoading(true)
       const res = await axios.get(API_URL)
       if (res.data) {
-        setAboutData({ ...initialData, ...res.data })
+        // Merge with initialData to ensure nested objects exist
+        setAboutData({ 
+            ...initialData, 
+            ...res.data,
+            stats: res.data.stats || initialData.stats,
+            dailyQuote: res.data.dailyQuote || initialData.dailyQuote
+        })
       }
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -130,14 +156,12 @@ export default function AdminAbout() {
     }
   }
 
-  // --- UPDATED: Server-side Upload Handler ---
-  // এটি এখন সরাসরি Cloudinary তে না পাঠিয়ে আপনার /api/upload/image এ পাঠাবে
+  // --- Image Upload Handler ---
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
     try {
       const formData = new FormData()
       formData.append("file", file)
 
-      // Call our own Next.js API
       const res = await axios.post("/api/upload/image", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       })
@@ -164,6 +188,22 @@ export default function AdminAbout() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
     setAboutData((prev) => ({ ...prev, [id]: value }))
+  }
+
+  // Handle Nested Stats Change
+  const handleStatsChange = (key: string, value: string) => {
+    setAboutData(prev => ({
+        ...prev,
+        stats: { ...prev.stats, [key]: value }
+    }))
+  }
+
+  // Handle Nested Quote Change
+  const handleQuoteChange = (key: string, value: string) => {
+    setAboutData(prev => ({
+        ...prev,
+        dailyQuote: { ...prev.dailyQuote, [key]: value }
+    }))
   }
 
   const handleProfileImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,7 +239,7 @@ export default function AdminAbout() {
     setAboutData(prev => ({ ...prev, experiences: prev.experiences.filter(exp => exp.id !== id) }))
   }
 
-  // --- Team Logic ---
+  // Team Logic
   const addTeamMember = () => {
     const newMember: TeamMember = { 
       id: Date.now().toString(), 
@@ -289,7 +329,7 @@ export default function AdminAbout() {
       setIsEditing(false)
     } catch (error) {
       console.error("Save error:", error)
-      Swal.fire({ icon: "error", title: "Error", text: "Failed to save data. Check console.", background: "#1e293b", color: "#fff" })
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to save data.", background: "#1e293b", color: "#fff" })
     } finally {
       setLoading(false)
     }
@@ -307,9 +347,9 @@ export default function AdminAbout() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">About & Team</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">About & Home Settings</h1>
           <p className="text-gray-400 max-w-md leading-relaxed">
-            Manage your personal bio, professional experience, and team members.
+            Manage your personal bio, hero section, experience, and team members.
           </p>
         </div>
         
@@ -323,7 +363,7 @@ export default function AdminAbout() {
         )}
       </div>
 
-      {/* --- TOP SECTION: Profile, Bio, Experience (Grid Layout) --- */}
+      {/* --- GRID LAYOUT --- */}
       <div className="grid gap-8 lg:grid-cols-3">
         
         {/* Left: Profile Card */}
@@ -360,10 +400,120 @@ export default function AdminAbout() {
           </Card>
         </div>
 
-        {/* Right: Bio & Experience */}
+        {/* Right: Forms */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Bio & Skills */}
+          {/* ======================================================== */}
+          {/* HERO SECTION CONFIGURATION (NEW)                         */}
+          {/* ======================================================== */}
+          <Card className="rounded-xl border border-white/5 bg-white/5 shadow-none">
+            <CardHeader className="border-b border-white/10 p-6">
+                <CardTitle className="text-xl font-semibold flex items-center gap-2 text-white">
+                    <LayoutTemplate className="h-5 w-5 text-emerald-500" />
+                    Hero Section Settings
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+               {isEditing ? (
+                 <div className="space-y-6">
+                    {/* Main Title */}
+                    <div className="space-y-2">
+                        <Label className="text-gray-300">Hero Main Title</Label>
+                        <Input 
+                            id="heroTitle" 
+                            value={aboutData.heroTitle} 
+                            onChange={handleInputChange} 
+                            className="bg-[#0f172a] border-white/10 text-white" 
+                            placeholder="e.g. জ্ঞান ও আমলের আলোকিত পথচলা"
+                        />
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="space-y-2">
+                        <Label className="text-emerald-500 text-xs font-bold uppercase flex items-center gap-2">
+                            <BarChart className="h-3 w-3" /> Statistics
+                        </Label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <Label className="text-gray-400 text-xs">Lectures Count</Label>
+                                <Input 
+                                    value={aboutData.stats?.lectures} 
+                                    onChange={(e) => handleStatsChange('lectures', e.target.value)} 
+                                    className="bg-[#0f172a] border-white/10 text-white mt-1" 
+                                    placeholder="500+"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-gray-400 text-xs">Followers</Label>
+                                <Input 
+                                    value={aboutData.stats?.followers} 
+                                    onChange={(e) => handleStatsChange('followers', e.target.value)} 
+                                    className="bg-[#0f172a] border-white/10 text-white mt-1" 
+                                    placeholder="50k+"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-gray-400 text-xs">Experience</Label>
+                                <Input 
+                                    value={aboutData.stats?.experience} 
+                                    onChange={(e) => handleStatsChange('experience', e.target.value)} 
+                                    className="bg-[#0f172a] border-white/10 text-white mt-1" 
+                                    placeholder="10+"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Daily Quote */}
+                    <div className="space-y-3 bg-[#0f172a]/50 p-4 rounded-lg border border-white/5">
+                        <Label className="text-emerald-500 text-xs font-bold uppercase flex items-center gap-2">
+                            <Quote className="h-3 w-3" /> Daily Quote / Reminder
+                        </Label>
+                        <Input 
+                            value={aboutData.dailyQuote?.title} 
+                            onChange={(e) => handleQuoteChange('title', e.target.value)} 
+                            className="bg-[#0f172a] border-white/10 text-white" 
+                            placeholder="Headline (e.g. আজকের আয়াত)"
+                        />
+                        <Textarea 
+                            value={aboutData.dailyQuote?.text} 
+                            onChange={(e) => handleQuoteChange('text', e.target.value)} 
+                            className="bg-[#0f172a] border-white/10 text-white" 
+                            placeholder="Quote text..."
+                        />
+                    </div>
+                 </div>
+               ) : (
+                 /* View Mode for Hero */
+                 <div className="space-y-4">
+                    <div>
+                        <p className="text-xs text-gray-500 uppercase">Hero Title</p>
+                        <h3 className="text-xl font-bold text-white">{aboutData.heroTitle || "Not Set"}</h3>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 border-y border-white/10 py-4">
+                        <div>
+                            <p className="text-2xl font-bold text-emerald-400">{aboutData.stats?.lectures || "0"}</p>
+                            <p className="text-xs text-gray-500">Lectures</p>
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-emerald-400">{aboutData.stats?.followers || "0"}</p>
+                            <p className="text-xs text-gray-500">Followers</p>
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-emerald-400">{aboutData.stats?.experience || "0"}</p>
+                            <p className="text-xs text-gray-500">Years Exp.</p>
+                        </div>
+                    </div>
+                    <div className="bg-[#0f172a] p-4 rounded border border-white/5">
+                        <p className="text-xs text-emerald-500 font-bold mb-1">{aboutData.dailyQuote?.title || "Reminder"}</p>
+                        <p className="text-gray-300 italic">&quot;{aboutData.dailyQuote?.text}&quot;</p>
+                    </div>
+                 </div>
+               )}
+            </CardContent>
+          </Card>
+
+          {/* Personal Info */}
           <Card className="rounded-xl border border-white/5 bg-white/5 shadow-none">
             <CardHeader className="border-b border-white/10 p-6">
                 <CardTitle className="text-xl font-semibold flex items-center gap-2">
@@ -385,11 +535,11 @@ export default function AdminAbout() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                      <Label className="text-gray-300">Tagline</Label>
+                      <Label className="text-gray-300">Tagline (Short Bio)</Label>
                       <Input id="tagline" value={aboutData.tagline} onChange={handleInputChange} className="bg-[#0f172a] border-white/10 text-white" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-gray-300">About Description</Label>
+                    <Label className="text-gray-300">Full Biography</Label>
                     <Textarea id="description" rows={5} value={aboutData.description} onChange={handleInputChange} className="bg-[#0f172a] border-white/10 text-white" />
                   </div>
                   <div className="space-y-3">
@@ -458,7 +608,7 @@ export default function AdminAbout() {
         </div>
       </div>
 
-      {/* --- BOTTOM SECTION: Team Members (Full Width) --- */}
+      {/* --- BOTTOM SECTION: Team Members --- */}
       <div className="mt-8">
         <Card className="rounded-xl border border-white/5 bg-white/5 shadow-none w-full">
             <CardHeader className="border-b border-white/10 p-6 flex flex-row items-center justify-between">
@@ -467,19 +617,18 @@ export default function AdminAbout() {
                   Meet The Team
               </CardTitle>
               {isEditing && <Button size="sm" onClick={addTeamMember} className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500 hover:text-white"><Plus className="h-4 w-4 mr-1"/> Add Member</Button>}
-          </CardHeader>
-          <CardContent className="p-8">
+            </CardHeader>
+            <CardContent className="p-8">
               <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {aboutData.team.length === 0 && <p className="text-gray-500 text-sm col-span-full text-center">No team members yet.</p>}
 
                 {aboutData.team.map((member) => (
                   <div key={member.id} className="bg-[#0f172a]/50 border border-white/10 rounded-xl p-5 flex flex-col gap-4 h-full">
                       {isEditing ? (
-                        /* --- Team Member Edit Mode --- */
                         <>
                             <div className="flex items-start gap-4">
                               <div className="relative w-16 h-16 shrink-0 bg-black/20 rounded-full overflow-hidden border border-white/10 cursor-pointer group">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img src={member.image || "/placeholder.png"} alt="Team" className="w-full h-full object-cover" />
                                   <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer text-white">
                                       <Upload className="h-4 w-4"/>
@@ -496,13 +645,10 @@ export default function AdminAbout() {
                             </div>
                             <Textarea placeholder="Bio" value={member.bio} onChange={(e) => updateTeamMember(member.id, 'bio', e.target.value)} className="bg-[#0f172a] border-white/10 text-white text-xs h-20"/>
                             
-                            {/* --- UPDATED Dynamic Social Links Edit with Select --- */}
                             <div className="space-y-2">
                               <Label className="text-xs text-emerald-500 uppercase font-semibold">Social Links</Label>
                               {member.socials.map((link) => (
                                 <div key={link.id} className="flex gap-2 items-center">
-                                  
-                                  {/* ICON SELECT DROPDOWN */}
                                   <div className="relative w-1/3">
                                       <select
                                         value={link.platform}
@@ -516,9 +662,8 @@ export default function AdminAbout() {
                                           </option>
                                         ))}
                                       </select>
-                                      {/* Visual Icon Hint inside select */}
                                       <div className="absolute right-2 top-1.5 pointer-events-none text-emerald-500">
-                                         {getSocialIcon(link.platform)}
+                                          {getSocialIcon(link.platform)}
                                       </div>
                                   </div>
 
@@ -533,10 +678,9 @@ export default function AdminAbout() {
                             </div>
                         </>
                       ) : (
-                        /* --- Team Member View Mode --- */
                         <div className="text-center flex flex-col items-center flex-1">
                             <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-emerald-500/20 mb-4 shadow-lg">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img src={member.image || "https://github.com/shadcn.png"} alt={member.name} className="w-full h-full object-cover" />
                             </div>
                             <h4 className="font-bold text-white text-lg">{member.name}</h4>
@@ -559,7 +703,7 @@ export default function AdminAbout() {
         </Card>
       </div>
 
-      {/* Save Button (Fixed Bottom) */}
+      {/* Save Button */}
       {isEditing && (
           <div className="flex gap-4 pt-4 border-t border-white/10 sticky bottom-6 bg-[#0f172a]/95 backdrop-blur p-4 rounded-xl border border-white/10 shadow-2xl z-10 w-full max-w-4xl mx-auto">
             <Button onClick={handleSave} disabled={loading} className="bg-emerald-500 hover:bg-emerald-600 text-white flex-1">
