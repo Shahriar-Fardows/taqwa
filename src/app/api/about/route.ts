@@ -1,128 +1,95 @@
-import { NextResponse } from "next/server"
-import mongoose, { Schema } from "mongoose"
-import { connectDB } from "@/lib/db"
+import { NextResponse } from "next/server";
+import mongoose, { Schema } from "mongoose";
+import { connectDB } from "@/lib/db";
 
-// Create schema directly here
-const AboutSchema = new Schema(
-  {
-    // সেকশনের নাম (যেমন: "My Story", "Mission", "Team")
-    title: { type: String, required: true },
-    
-    // Flexible Field: এখানে তুমি String, Array, Object যা খুশি রাখতে পারবে
-    details: { type: Schema.Types.Mixed, required: true },
-    
-    // অপশনাল: ইমেজ বা অন্য কিছুর লিংক
-    imageUrl: { type: String, default: "" },
-  },
-  { timestamps: true },
-)
+/* ================= Sub Schemas ================= */
 
-// Prevent re-registering model
-const About = mongoose.models.About || mongoose.model("About", AboutSchema)
+const SocialSchema = new Schema({
+  id: String,
+  platform: String,
+  url: String,
+}, { _id: false });
 
-/* ============================
-   GET ALL ABOUT INFO
-============================ */
+const TeamSchema = new Schema({
+  id: String,
+  name: String,
+  role: String,
+  image: String,
+  bio: String,
+  socials: [SocialSchema],
+}, { _id: false });
+
+const ExperienceSchema = new Schema({
+  id: String,
+  role: String,
+  company: String,
+  year: String,
+  description: String,
+}, { _id: false });
+
+/* ================= Main Schema ================= */
+
+const AboutSchema = new Schema({
+  name: String,
+  designation: String,
+  tagline: String,
+  description: String,
+  imageUrl: String,
+  skills: [String],
+  experiences: [ExperienceSchema],
+  team: [TeamSchema],
+}, { timestamps: true });
+
+const About =
+  mongoose.models.About || mongoose.model("About", AboutSchema);
+
+/* ================= GET ================= */
+
 export async function GET() {
-  await connectDB()
+  await connectDB();
   try {
-    const aboutData = await About.find().sort({ createdAt: -1 }) // নতুন ডাটা আগে দেখাবে
-    return NextResponse.json({ success: true, data: aboutData })
+    const data = await About.findOne();
+    return NextResponse.json(
+      data || {
+        name: "",
+        designation: "",
+        tagline: "",
+        description: "",
+        imageUrl: "",
+        skills: [],
+        experiences: [],
+        team: [],
+      }
+    );
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Error fetching data" }, { status: 500 })
+    return NextResponse.json(
+      { success: false },
+      { status: 500 }
+    );
   }
 }
 
-/* ============================
-   CREATE NEW ABOUT SECTION
-============================ */
-export async function POST(req: Request) {
-  await connectDB()
+/* ================= PUT ================= */
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function PUT(req: { json: () => any; }) {
+  await connectDB();
   try {
-    const body = await req.json()
-    const { title, details, imageUrl } = body
+    const body = await req.json();
+    const existing = await About.findOne();
 
-    if (!title || !details) {
-      return NextResponse.json({ success: false, message: "Title and details are required" }, { status: 400 })
-    }
+    const data = existing
+      ? await About.findByIdAndUpdate(existing._id, body, {
+          new: true,
+          runValidators: true,
+        })
+      : await About.create(body);
 
-    const newAbout = await About.create({
-      title,
-      details, // এখানে তুমি যা পাঠাবে তাই সেভ হবে
-      imageUrl: imageUrl || "",
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: "About section created",
-      data: newAbout,
-    })
+    return NextResponse.json({ success: true, data });
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Error creating data" }, { status: 500 })
-  }
-}
-
-/* ============================
-   UPDATE ABOUT SECTION
-============================ */
-export async function PUT(req: Request) {
-  await connectDB()
-  try {
-    const body = await req.json()
-    const { id, title, details, imageUrl } = body
-
-    if (!id) {
-      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 })
-    }
-
-    const updated = await About.findByIdAndUpdate(
-      id,
-      {
-        title,
-        details,
-        imageUrl,
-      },
-      { new: true },
-    )
-
-    if (!updated) {
-      return NextResponse.json({ success: false, message: "Data not found" }, { status: 404 })
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "About section updated",
-      data: updated,
-    })
-  } catch (error) {
-    return NextResponse.json({ success: false, message: "Error updating data" }, { status: 500 })
-  }
-}
-
-/* ============================
-   DELETE ABOUT SECTION
-============================ */
-export async function DELETE(req: Request) {
-  await connectDB()
-  try {
-    const body = await req.json()
-    const { id } = body
-
-    if (!id) {
-      return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 })
-    }
-
-    const deleted = await About.findByIdAndDelete(id)
-
-    if (!deleted) {
-      return NextResponse.json({ success: false, message: "Data not found" }, { status: 404 })
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "About section deleted",
-    })
-  } catch (error) {
-    return NextResponse.json({ success: false, message: "Error deleting data" }, { status: 500 })
+    return NextResponse.json(
+      { success: false },
+      { status: 500 }
+    );
   }
 }

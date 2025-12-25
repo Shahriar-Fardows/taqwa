@@ -27,7 +27,6 @@ import {
   Instagram,
   Youtube,
   Link as LinkIcon,
-  ChevronDown
 } from "lucide-react"
 
 // --- Interfaces ---
@@ -93,7 +92,7 @@ const SOCIAL_OPTIONS = [
 
 // --- Helper: Get Icon ---
 const getSocialIcon = (platform: string) => {
-  const p = platform.toLowerCase().trim();
+  const p = platform ? platform.toLowerCase().trim() : "other";
   const found = SOCIAL_OPTIONS.find(opt => opt.value === p);
   if (found) {
     const Icon = found.icon;
@@ -131,19 +130,31 @@ export default function AdminAbout() {
     }
   }
 
-  // --- Cloudinary Upload ---
+  // --- UPDATED: Server-side Upload Handler ---
+  // এটি এখন সরাসরি Cloudinary তে না পাঠিয়ে আপনার /api/upload/image এ পাঠাবে
   const uploadToCloudinary = async (file: File): Promise<string | null> => {
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "")
-    
     try {
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
-      const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData)
-      return res.data.secure_url
-    } catch (error) {
-      console.error("Image upload failed:", error)
-      Swal.fire({ icon: "error", title: "Upload Failed", text: "Check your Cloudinary config" })
+      const formData = new FormData()
+      formData.append("file", file)
+
+      // Call our own Next.js API
+      const res = await axios.post("/api/upload/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+
+      if (res.data.success) {
+        return res.data.url
+      }
+      return null
+    } catch (err) {
+      console.error("Upload failed:", err)
+      Swal.fire({
+        icon: "error",
+        title: "Upload Failed",
+        text: "Could not upload image via server.",
+        background: "#1e293b",
+        color: "#fff"
+      })
       return null
     }
   }
@@ -222,7 +233,6 @@ export default function AdminAbout() {
       ...prev,
       team: prev.team.map(member => {
         if (member.id === memberId) {
-          // Default to first option (Facebook) or empty
           return {
             ...member,
             socials: [...member.socials, { id: Date.now().toString(), platform: "facebook", url: "" }]
@@ -265,6 +275,7 @@ export default function AdminAbout() {
     setLoading(true)
     try {
       await axios.put(API_URL, aboutData)
+      
       Swal.fire({
         icon: "success",
         title: "Saved Successfully",
@@ -278,7 +289,7 @@ export default function AdminAbout() {
       setIsEditing(false)
     } catch (error) {
       console.error("Save error:", error)
-      Swal.fire({ icon: "error", title: "Error", text: "Failed to save data.", background: "#1e293b", color: "#fff" })
+      Swal.fire({ icon: "error", title: "Error", text: "Failed to save data. Check console.", background: "#1e293b", color: "#fff" })
     } finally {
       setLoading(false)
     }
@@ -507,7 +518,7 @@ export default function AdminAbout() {
                                       </select>
                                       {/* Visual Icon Hint inside select */}
                                       <div className="absolute right-2 top-1.5 pointer-events-none text-emerald-500">
-                                         {link.platform && getSocialIcon(link.platform)}
+                                         {getSocialIcon(link.platform)}
                                       </div>
                                   </div>
 
