@@ -3,14 +3,16 @@
 import React, { useEffect, useState } from "react"
 import axios from "axios"
 import Image from "next/image"
-import Link from "next/link" // লিংক ইমপোর্ট করা হয়েছে
+import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Play, 
   Image as ImageIcon, 
   X,
   Loader2,
-  ArrowRight // আইকন ইমপোর্ট
+  ArrowRight,
+  Video,
+  Camera
 } from "lucide-react"
 
 // --- Interface ---
@@ -42,14 +44,21 @@ const getYouTubeId = (url: string) => {
 const getThumbnail = (item: MediaItem) => {
   if (item.thumbnail && item.thumbnail !== "") return item.thumbnail;
   if (item.type === 'image') return item.url;
+  // Cloudinary Video Thumbnail Logic
   if (item.type === 'video' && item.url.includes('cloudinary')) {
       return item.url.replace(/\.(mp4|webm|mov|mkv)$/i, ".jpg");
+  }
+  // YouTube Thumbnail Logic
+  if (item.type === 'video' && (item.url.includes('youtube') || item.url.includes('youtu.be'))) {
+      const id = getYouTubeId(item.url);
+      return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null;
   }
   return null;
 }
 
 export default function MediaSection() {
-  const [mediaItems, setMediaItems] = useState<MediaItem[]>([])
+  const [videos, setVideos] = useState<MediaItem[]>([])
+  const [images, setImages] = useState<MediaItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMedia, setSelectedMedia] = useState<MediaItem | null>(null)
 
@@ -58,7 +67,15 @@ export default function MediaSection() {
       try {
         const res = await axios.get<ApiResponse>("/api/media")
         if (res.data.success) {
-          setMediaItems(res.data.data.slice(0, 4))
+          const allData = res.data.data;
+          
+          // ১. ভিডিও ফিল্টার (সর্বোচ্চ ৪টি)
+          const videoData = allData.filter(item => item.type === 'video').slice(0, 4);
+          setVideos(videoData);
+
+          // ২. ইমেজ ফিল্টার (সর্বোচ্চ ৪টি)
+          const imageData = allData.filter(item => item.type === 'image').slice(0, 4);
+          setImages(imageData);
         }
       } catch (error) {
         console.error("Error fetching media:", error)
@@ -70,7 +87,67 @@ export default function MediaSection() {
   }, [])
 
   if (loading) return null 
-  if (mediaItems.length === 0) return null
+  if (videos.length === 0 && images.length === 0) return null
+
+  // --- Reusable Card Component ---
+  const MediaCard = ({ item, index }: { item: MediaItem, index: number }) => {
+    const thumbUrl = getThumbnail(item);
+    
+    return (
+      <motion.div
+        key={item._id}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ delay: index * 0.1 }}
+        onClick={() => setSelectedMedia(item)}
+        className="group cursor-pointer flex flex-col h-full"
+      >
+        {/* Card Image Area */}
+        <div className="relative h-56 md:h-64 w-full overflow-hidden bg-[#1e293b] rounded-xl border border-white/10 group-hover:border-emerald-500/50 transition-all duration-300 shadow-lg">
+          
+          {thumbUrl ? (
+             <Image 
+               src={thumbUrl} 
+               alt={item.title} 
+               fill
+               className="object-cover transition-transform duration-700 group-hover:scale-110"
+             />
+          ) : (
+             <div className="w-full h-full flex items-center justify-center text-gray-600 bg-[#0f172a]">
+                <ImageIcon className="w-12 h-12 opacity-30" />
+             </div>
+          )}
+
+          {/* Overlay Icon */}
+          <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+             <div className="w-14 h-14 bg-emerald-600/90 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 scale-90 group-hover:scale-110 transition-transform duration-300">
+                {item.type === 'video' ? (
+                   <Play className="w-6 h-6 ml-1" />
+                ) : (
+                   <ImageIcon className="w-6 h-6" />
+                )}
+             </div>
+          </div>
+
+          {/* Category Badge */}
+          <div className="absolute top-3 left-3 px-2 py-1 bg-black/70 backdrop-blur-md text-emerald-400 text-[10px] font-bold uppercase rounded border border-white/10">
+            {item.category || "Gallery"}
+          </div>
+        </div>
+
+        {/* Card Content */}
+        <div className="mt-3 px-1">
+           <h3 className="text-white font-bold text-lg leading-snug group-hover:text-emerald-400 transition-colors line-clamp-2">
+              {item.title}
+           </h3>
+           <p className="text-xs text-gray-500 mt-1">
+              {new Date(item.createdAt).toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' })}
+           </p>
+        </div>
+      </motion.div>
+    )
+  }
 
   return (
     <section className="py-20 bg-[#020617] border-t border-white/5 relative overflow-hidden">
@@ -80,77 +157,53 @@ export default function MediaSection() {
 
       <div className="container mx-auto px-6 relative z-10">
         
-        {/* --- Header --- */}
-        <div className="mb-12 text-center md:text-left">
-           <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
-             মিডিয়া ও <span className="text-emerald-500">গ্যালারি</span>
-           </h2>
-           <p className="text-gray-400">আমাদের লেটেস্ট ভিডিও এবং ফটো গ্যালারি</p>
-        </div>
-
-        {/* --- Grid Layout --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {mediaItems.map((item, index) => {
-            const thumbUrl = getThumbnail(item);
-            
-            return (
-              <motion.div
-                key={item._id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1 }}
-                onClick={() => setSelectedMedia(item)}
-                className="group cursor-pointer flex flex-col h-full"
-              >
-                {/* Card Image Area */}
-                <div className="relative h-64 md:h-[25rem] w-full overflow-hidden bg-[#1e293b] rounded-xl border border-white/10 group-hover:border-emerald-500/50 transition-all duration-300 shadow-lg">
-                  
-                  {thumbUrl ? (
-                     <Image 
-                       src={thumbUrl} 
-                       alt={item.title} 
-                       fill
-                       className="object-cover transition-transform duration-700 group-hover:scale-105"
-                     />
-                  ) : (
-                     <div className="w-full h-full flex items-center justify-center text-gray-600 bg-[#0f172a]">
-                        <ImageIcon className="w-12 h-12 opacity-30" />
-                     </div>
-                  )}
-
-                  {/* Overlay Icon */}
-                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                     <div className="w-16 h-16 bg-emerald-600/90 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30 scale-90 group-hover:scale-110 transition-transform duration-300">
-                        {item.type === 'video' ? (
-                           <Play className="w-6 h-6 ml-1" />
-                        ) : (
-                           <ImageIcon className="w-6 h-6" />
-                        )}
-                     </div>
-                  </div>
-
-                  {/* Category Badge */}
-                  <div className="absolute top-4 left-4 px-3 py-1 bg-black/70 backdrop-blur-md text-emerald-400 text-xs font-bold uppercase rounded border border-white/10">
-                    {item.category || "Gallery"}
-                  </div>
+        {/* === SECTION 1: VIDEOS === */}
+        {videos.length > 0 && (
+          <div className="mb-20">
+             <div className="flex items-center gap-3 mb-8 border-b border-white/10 pb-4">
+                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-500">
+                    <Video className="w-6 h-6" />
                 </div>
-
-                {/* Card Content */}
-                <div className="mt-4 px-2">
-                   <h3 className="text-white font-bold text-xl leading-snug group-hover:text-emerald-400 transition-colors line-clamp-2">
-                      {item.title}
-                   </h3>
-                   <p className="text-sm text-gray-500 mt-2">
-                      {new Date(item.createdAt).toLocaleDateString('bn-BD', { year: 'numeric', month: 'long', day: 'numeric' })}
-                   </p>
+                <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white">
+                      ভিডিও <span className="text-emerald-500">গ্যালারি</span>
+                    </h2>
+                    <p className="text-gray-400 text-sm">আমাদের লেটেস্ট ভিডিও ফুটেজ এবং কার্যক্রম</p>
                 </div>
-              </motion.div>
-            )
-          })}
-        </div>
+             </div>
 
-        {/* --- View All Button (ADDED HERE) --- */}
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {videos.map((item, index) => (
+                   <MediaCard key={item._id} item={item} index={index} />
+                ))}
+             </div>
+          </div>
+        )}
+
+        {/* === SECTION 2: IMAGES === */}
+        {images.length > 0 && (
+          <div>
+             <div className="flex items-center gap-3 mb-8 border-b border-white/10 pb-4">
+                <div className="p-2 bg-purple-500/10 rounded-lg text-purple-500">
+                    <Camera className="w-6 h-6" />
+                </div>
+                <div>
+                    <h2 className="text-2xl md:text-3xl font-bold text-white">
+                      ফটো <span className="text-purple-500">গ্যালারি</span>
+                    </h2>
+                    <p className="text-gray-400 text-sm">আমাদের ইভেন্ট এবং মুহূর্তের স্থিরচিত্র</p>
+                </div>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {images.map((item, index) => (
+                   <MediaCard key={item._id} item={item} index={index} />
+                ))}
+             </div>
+          </div>
+        )}
+
+        {/* --- View All Button --- */}
         <div className="mt-16 flex justify-center">
           <Link 
             href="/media" 
@@ -162,10 +215,12 @@ export default function MediaSection() {
 
       </div>
 
-      {/* --- POPUP MODAL --- */}
+      {/* --- POPUP MODAL (Shared) --- */}
       <AnimatePresence>
         {selectedMedia && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            
+            {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -174,6 +229,7 @@ export default function MediaSection() {
               className="absolute inset-0 bg-black/90 backdrop-blur-md"
             />
 
+            {/* Modal Content */}
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

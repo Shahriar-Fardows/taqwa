@@ -140,14 +140,14 @@ export default function EventAdmin() {
 
       if (isEditing && editId) {
         // UPDATE
-        const res = await axios.put("/api/event", { id: editId, ...payload })
+        const res = await axios.put("/api/events", { id: editId, ...payload })
         if (res.data.success) {
             Swal.fire("Updated!", "Event updated successfully.", "success")
             fetchEvents()
         }
       } else {
         // CREATE
-        const res = await axios.post("/api/event", payload)
+        const res = await axios.post("/api/events", payload)
         if (res.data.success) {
             Swal.fire("Created!", "New event created.", "success")
             fetchEvents()
@@ -202,7 +202,7 @@ export default function EventAdmin() {
 
     if (result.isConfirmed) {
       try {
-        await axios.delete("/api/event", { data: { id } })
+        await axios.delete("/api/events", { data: { id } })
         setEvents(prev => prev.filter(e => e._id !== id))
         Swal.fire('Deleted!', 'Event has been deleted.', 'success')
       } catch (error) {
