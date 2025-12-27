@@ -36,22 +36,8 @@ const AboutSchema = new Schema({
   tagline: { type: String, default: "" },
   description: { type: String, default: "" },
   imageUrl: { type: String, default: "" },
-  
-  // === NEW HERO SECTION FIELDS ===
-  heroTitle: { type: String, default: "জ্ঞান ও আমলের আলোকিত পথচলা" }, // বড় হেডলাইন
-  
-  stats: {
-    lectures: { type: String, default: "৫০০+" },
-    followers: { type: String, default: "৫০k+" },
-    experience: { type: String, default: "১০+" }
-  },
 
-  dailyQuote: {
-    title: { type: String, default: "আজকের আয়াত" },
-    text: { type: String, default: "তোমাদের মধ্যে তারাই উত্তম যারা কুরআন শেখে এবং শেখায়।" }
-  },
-  // ===============================
-
+  // Arrays
   skills: [String],
   experiences: [ExperienceSchema],
   team: [TeamSchema],
@@ -73,9 +59,6 @@ export async function GET() {
         tagline: "",
         description: "",
         imageUrl: "",
-        heroTitle: "", // Default
-        stats: { lectures: "", followers: "", experience: "" }, // Default
-        dailyQuote: { title: "", text: "" }, // Default
         skills: [],
         experiences: [],
         team: [],
@@ -98,6 +81,8 @@ export async function PUT(req: { json: () => any; }) {
     const body = await req.json();
     const existing = await About.findOne();
 
+    // যেহেতু স্কিমা থেকে Hero/Stats ফিল্ড সরানো হয়েছে, 
+    // তাই ফ্রন্টেন্ড থেকে ভুল করে পাঠালেও সেগুলো ডাটাবেসে সেভ হবে না।
     const data = existing
       ? await About.findByIdAndUpdate(existing._id, body, {
           new: true,

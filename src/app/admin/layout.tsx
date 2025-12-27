@@ -39,6 +39,7 @@ const menuItems = [
   { title: "About", href: "/admin/about", icon: User },
   { title: "Blog", href: "/admin/blog", icon: FileText },
   { title: "Media", href: "/admin/media", icon: Video },
+  { title: "Banners", href: "/admin/banners", icon: ImageIcon },
   { title: "Business", href: "/admin/business", icon: Briefcase },
   { title: "Events", href: "/admin/event", icon: Calendar },
   { title: "Review", href: "/admin/review", icon: Star },

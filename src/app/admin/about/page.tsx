@@ -26,17 +26,14 @@ import {
   Globe,
   Instagram,
   Youtube,
-  Link as LinkIcon,
-  LayoutTemplate, // New Icon
-  Quote, // New Icon
-  BarChart // New Icon
+  Link as LinkIcon
 } from "lucide-react"
 
 // --- Interfaces ---
 
 interface SocialLink {
   id: string
-  platform: string 
+  platform: string
   url: string
 }
 
@@ -57,7 +54,6 @@ interface Experience {
   description: string
 }
 
-// Updated Interface with Hero Section Fields
 interface AboutData {
   _id?: string
   name: string
@@ -66,14 +62,14 @@ interface AboutData {
   description: string
   imageUrl: string
   
-  // New Hero Fields
-  heroTitle: string
-  stats: {
+  // Hero fields kept in interface to avoid API errors, but not used in UI
+  heroTitle?: string
+  stats?: {
     lectures: string
     followers: string
     experience: string
   }
-  dailyQuote: {
+  dailyQuote?: {
     title: string
     text: string
   }
@@ -141,10 +137,10 @@ export default function AdminAbout() {
       setIsDataLoading(true)
       const res = await axios.get(API_URL)
       if (res.data) {
-        // Merge with initialData to ensure nested objects exist
         setAboutData({ 
             ...initialData, 
             ...res.data,
+            // Keeping these to ensure object structure matches even if hidden in UI
             stats: res.data.stats || initialData.stats,
             dailyQuote: res.data.dailyQuote || initialData.dailyQuote
         })
@@ -188,22 +184,6 @@ export default function AdminAbout() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target
     setAboutData((prev) => ({ ...prev, [id]: value }))
-  }
-
-  // Handle Nested Stats Change
-  const handleStatsChange = (key: string, value: string) => {
-    setAboutData(prev => ({
-        ...prev,
-        stats: { ...prev.stats, [key]: value }
-    }))
-  }
-
-  // Handle Nested Quote Change
-  const handleQuoteChange = (key: string, value: string) => {
-    setAboutData(prev => ({
-        ...prev,
-        dailyQuote: { ...prev.dailyQuote, [key]: value }
-    }))
   }
 
   const handleProfileImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,9 +327,9 @@ export default function AdminAbout() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">About & Home Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-white mb-2">About Settings</h1>
           <p className="text-gray-400 max-w-md leading-relaxed">
-            Manage your personal bio, hero section, experience, and team members.
+            Manage your personal bio, experience, and team members.
           </p>
         </div>
         
@@ -403,115 +383,7 @@ export default function AdminAbout() {
         {/* Right: Forms */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* ======================================================== */}
-          {/* HERO SECTION CONFIGURATION (NEW)                         */}
-          {/* ======================================================== */}
-          <Card className="rounded-xl border border-white/5 bg-white/5 shadow-none">
-            <CardHeader className="border-b border-white/10 p-6">
-                <CardTitle className="text-xl font-semibold flex items-center gap-2 text-white">
-                    <LayoutTemplate className="h-5 w-5 text-emerald-500" />
-                    Hero Section Settings
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
-               {isEditing ? (
-                 <div className="space-y-6">
-                    {/* Main Title */}
-                    <div className="space-y-2">
-                        <Label className="text-gray-300">Hero Main Title</Label>
-                        <Input 
-                            id="heroTitle" 
-                            value={aboutData.heroTitle} 
-                            onChange={handleInputChange} 
-                            className="bg-[#0f172a] border-white/10 text-white" 
-                            placeholder="e.g. জ্ঞান ও আমলের আলোকিত পথচলা"
-                        />
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="space-y-2">
-                        <Label className="text-emerald-500 text-xs font-bold uppercase flex items-center gap-2">
-                            <BarChart className="h-3 w-3" /> Statistics
-                        </Label>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <Label className="text-gray-400 text-xs">Lectures Count</Label>
-                                <Input 
-                                    value={aboutData.stats?.lectures} 
-                                    onChange={(e) => handleStatsChange('lectures', e.target.value)} 
-                                    className="bg-[#0f172a] border-white/10 text-white mt-1" 
-                                    placeholder="500+"
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-gray-400 text-xs">Followers</Label>
-                                <Input 
-                                    value={aboutData.stats?.followers} 
-                                    onChange={(e) => handleStatsChange('followers', e.target.value)} 
-                                    className="bg-[#0f172a] border-white/10 text-white mt-1" 
-                                    placeholder="50k+"
-                                />
-                            </div>
-                            <div>
-                                <Label className="text-gray-400 text-xs">Experience</Label>
-                                <Input 
-                                    value={aboutData.stats?.experience} 
-                                    onChange={(e) => handleStatsChange('experience', e.target.value)} 
-                                    className="bg-[#0f172a] border-white/10 text-white mt-1" 
-                                    placeholder="10+"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Daily Quote */}
-                    <div className="space-y-3 bg-[#0f172a]/50 p-4 rounded-lg border border-white/5">
-                        <Label className="text-emerald-500 text-xs font-bold uppercase flex items-center gap-2">
-                            <Quote className="h-3 w-3" /> Daily Quote / Reminder
-                        </Label>
-                        <Input 
-                            value={aboutData.dailyQuote?.title} 
-                            onChange={(e) => handleQuoteChange('title', e.target.value)} 
-                            className="bg-[#0f172a] border-white/10 text-white" 
-                            placeholder="Headline (e.g. আজকের আয়াত)"
-                        />
-                        <Textarea 
-                            value={aboutData.dailyQuote?.text} 
-                            onChange={(e) => handleQuoteChange('text', e.target.value)} 
-                            className="bg-[#0f172a] border-white/10 text-white" 
-                            placeholder="Quote text..."
-                        />
-                    </div>
-                 </div>
-               ) : (
-                 /* View Mode for Hero */
-                 <div className="space-y-4">
-                    <div>
-                        <p className="text-xs text-gray-500 uppercase">Hero Title</p>
-                        <h3 className="text-xl font-bold text-white">{aboutData.heroTitle || "Not Set"}</h3>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 border-y border-white/10 py-4">
-                        <div>
-                            <p className="text-2xl font-bold text-emerald-400">{aboutData.stats?.lectures || "0"}</p>
-                            <p className="text-xs text-gray-500">Lectures</p>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-emerald-400">{aboutData.stats?.followers || "0"}</p>
-                            <p className="text-xs text-gray-500">Followers</p>
-                        </div>
-                        <div>
-                            <p className="text-2xl font-bold text-emerald-400">{aboutData.stats?.experience || "0"}</p>
-                            <p className="text-xs text-gray-500">Years Exp.</p>
-                        </div>
-                    </div>
-                    <div className="bg-[#0f172a] p-4 rounded border border-white/5">
-                        <p className="text-xs text-emerald-500 font-bold mb-1">{aboutData.dailyQuote?.title || "Reminder"}</p>
-                        <p className="text-gray-300 italic">&quot;{aboutData.dailyQuote?.text}&quot;</p>
-                    </div>
-                 </div>
-               )}
-            </CardContent>
-          </Card>
+          {/* Removed Hero Section Settings Card */}
 
           {/* Personal Info */}
           <Card className="rounded-xl border border-white/5 bg-white/5 shadow-none">
@@ -560,12 +432,12 @@ export default function AdminAbout() {
                 </>
               ) : (
                 <div className="prose prose-invert max-w-none">
-                   <p className="text-gray-300 whitespace-pre-wrap">{aboutData.description}</p>
-                   <div className="flex flex-wrap gap-3 mt-4">
+                    <p className="text-gray-300 whitespace-pre-wrap">{aboutData.description}</p>
+                    <div className="flex flex-wrap gap-3 mt-4">
                       {aboutData.skills.map((skill, i) => (
                           <span key={i} className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-sm border border-emerald-500/20">{skill}</span>
                       ))}
-                   </div>
+                    </div>
                 </div>
               )}
             </CardContent>
@@ -650,21 +522,21 @@ export default function AdminAbout() {
                               {member.socials.map((link) => (
                                 <div key={link.id} className="flex gap-2 items-center">
                                   <div className="relative w-1/3">
-                                      <select
-                                        value={link.platform}
-                                        onChange={(e) => updateSocialLink(member.id, link.id, 'platform', e.target.value)}
-                                        className="h-7 w-full text-xs bg-[#0f172a] border border-white/10 text-white rounded px-2 appearance-none cursor-pointer focus:outline-none focus:border-emerald-500"
-                                      >
-                                        <option value="" disabled>Icon</option>
-                                        {SOCIAL_OPTIONS.map((opt) => (
-                                          <option key={opt.value} value={opt.value}>
-                                            {opt.label}
-                                          </option>
-                                        ))}
-                                      </select>
-                                      <div className="absolute right-2 top-1.5 pointer-events-none text-emerald-500">
-                                          {getSocialIcon(link.platform)}
-                                      </div>
+                                    <select
+                                      value={link.platform}
+                                      onChange={(e) => updateSocialLink(member.id, link.id, 'platform', e.target.value)}
+                                      className="h-7 w-full text-xs bg-[#0f172a] border border-white/10 text-white rounded px-2 appearance-none cursor-pointer focus:outline-none focus:border-emerald-500"
+                                    >
+                                      <option value="" disabled>Icon</option>
+                                      {SOCIAL_OPTIONS.map((opt) => (
+                                        <option key={opt.value} value={opt.value}>
+                                          {opt.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="absolute right-2 top-1.5 pointer-events-none text-emerald-500">
+                                        {getSocialIcon(link.platform)}
+                                    </div>
                                   </div>
 
                                   <Input placeholder="https://..." value={link.url} onChange={(e) => updateSocialLink(member.id, link.id, 'url', e.target.value)} className="h-7 flex-1 text-xs bg-[#0f172a] border-white/10 text-white"/>

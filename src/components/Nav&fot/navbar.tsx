@@ -5,7 +5,7 @@ import Link from "next/link"
 import axios from "axios"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, Phone, X, Calendar, BookOpen } from "lucide-react"
+import { Menu, Phone, X, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // মেনু লিংক (বাংলা)
@@ -58,51 +58,34 @@ export function Navbar() {
     <>
       <nav
         className={cn(
-          "fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b border-transparent font-sans",
+          "sticky top-0 z-50 transition-all duration-500 border-b border-transparent font-sans w-full",
           scrolled 
             ? "bg-[#020817]/95 backdrop-blur-xl border-emerald-900/30 py-3 shadow-2xl" 
-            : "bg-transparent py-6"
+            : "bg-[#020817] py-6"
         )}
       >
         <div className="container mx-auto flex items-center justify-between px-6">
           
-          {/* --- লোগো সেকশন --- */}
+          {/* --- লোগো অথবা সাইট নেম সেকশন --- */}
           <Link href="/" className="flex items-center gap-3 group">
             
-            {/* কন্ডিশন: লোগো থাকলে ইমেজ, না থাকলে ডিফল্ট আইকন */}
             {siteInfo.logo ? (
+                // ১. যদি লোগো থাকে, শুধু লোগো দেখাবে
                 <div className="relative h-12 w-auto min-w-[40px] overflow-hidden rounded-lg">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                         src={siteInfo.logo} 
-                        alt="Logo" 
+                        alt={siteInfo.siteName || "Logo"} 
                         className="h-full w-full object-contain" 
                     />
                 </div>
             ) : (
-                <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform duration-300 shadow-lg shadow-emerald-500/20">
-                    <BookOpen className="text-white h-6 w-6" />
-                </div>
-            )}
-
-            {/* সাইট নেম বা টেক্সট */}
-            {!siteInfo.logo && (
-                <div className="flex flex-col">
-                    <span className="text-xl font-bold text-white leading-none tracking-wide">
-                        {siteInfo.siteName || "স্কলার পোর্টফোলিও"}
+                // ২. যদি লোগো না থাকে কিন্তু সাইট নেম থাকে, শুধু নাম দেখাবে
+                siteInfo.siteName && (
+                    <span className="text-xl md:text-2xl font-bold text-white leading-none tracking-wide">
+                        {siteInfo.siteName}
                     </span>
-                    <span className="text-[10px] text-emerald-400 font-medium tracking-widest uppercase mt-1">
-                        ইসলামিক শিক্ষা ও গবেষণা
-                    </span>
-                </div>
-            )}
-            
-            {/* যদি লোগো থাকে এবং সাইট নেমও থাকে, তবে সাইট নেম দেখাবে কিনা তা আপনার ইচ্ছা। 
-                সাধারণত লোগো থাকলে টেক্সট দরকার হয় না, তবে চাইলে নিচের কোডটি রাখতে পারেন: */}
-            {siteInfo.logo && siteInfo.siteName && (
-                 <span className="text-xl font-bold text-white leading-none tracking-wide hidden md:block">
-                    {siteInfo.siteName}
-                 </span>
+                )
             )}
 
           </Link>
@@ -155,7 +138,7 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* --- মোবাইল ড্রয়ার --- */}
+      {/* --- মোবাইল ড্রয়ার --- */}
       <div 
         className={cn(
           "fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm md:hidden transition-opacity duration-300",

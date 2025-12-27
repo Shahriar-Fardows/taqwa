@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server"
 import mongoose, { Schema } from "mongoose"
 import { connectDB } from "@/lib/db"
@@ -8,67 +9,81 @@ import { connectDB } from "@/lib/db"
 const BlogPostSchema = new Schema(
   {
     title: { type: String, required: true },
-    slug: { type: String, required: true, unique: true }, // যেমন: "how-to-learn-coding"
-    subtitle: { type: String }, // শর্ট ডেসক্রিপশন
-    
-    // মেইন কন্টেন্ট (HTML বা Markdown)
+    slug: { type: String, required: true, unique: true },
+    subtitle: { type: String },
     content: { type: String, required: true },
-    
-    // Cloudinary থেকে পাওয়া ইমেজের লিংক এখানে থাকবে
     image: { type: String, default: "" }, 
-    
     category: { type: String, default: "Tech" },
-    tags: { type: [String], default: [] }, // Array of strings
+    tags: { type: [String], default: [] },
     author: { type: String, default: "Admin" },
-    
-    // ব্লগটি ড্রাফট নাকি পাবলিশড
     isPublished: { type: Boolean, default: true },
-    
-    // কতজন ভিউ করেছে (অপশনাল ফিচার)
     views: { type: Number, default: 0 },
   },
   { timestamps: true }
 )
 
-// Prevent model overwrite error in Next.js
 const BlogPost = mongoose.models.BlogPost || mongoose.model("BlogPost", BlogPostSchema)
 
 /* ============================
-   GET ALL BLOG POSTS
+   GET METHOD (Handles BOTH All Blogs & Single Blog)
 ============================ */
 export async function GET(req: Request) {
   await connectDB()
   try {
-    // URL থেকে query parameter চেক করা (অপশনাল: যদি নির্দিষ্ট ক্যাটাগরি চাও)
     const { searchParams } = new URL(req.url)
+    const slug = searchParams.get("slug")       // চেক করবে slug আছে কিনা
     const category = searchParams.get("category")
+    const limit = searchParams.get("limit")     // লিমিট চেক (রিলেটেড পোস্টের জন্য)
 
-    let query = {}
-    if (category) {
-      query = { category: category }
+    // --- CASE 1: যদি SLUG থাকে, তাহলে সিঙ্গেল ব্লগ রিটার্ন করবে ---
+    if (slug) {
+      const post = await BlogPost.findOne({ slug: slug })
+
+      if (!post) {
+        return NextResponse.json({ success: false, message: "Blog not found" }, { status: 404 })
+      }
+
+      // ভিউ কাউন্ট বাড়ানো
+      post.views += 1
+      await post.save()
+
+      // লক্ষ্য করো: এখানে সরাসরি data অবজেক্ট রিটার্ন করছি (Array না)
+      return NextResponse.json({ success: true, data: post })
     }
 
-    // নতুন পোস্ট আগে দেখাবে (createdAt: -1)
-    const posts = await BlogPost.find(query).sort({ createdAt: -1 })
+    // --- CASE 2: যদি SLUG না থাকে, তাহলে সব ব্লগ রিটার্ন করবে ---
+    const query: any = {}
+    if (category) {
+      query.category = category
+    }
+
+    // কোয়েলি বিল্ড করা
+    let postsQuery = BlogPost.find(query).sort({ createdAt: -1 })
+
+    // যদি লিমিট থাকে (Sidebar এর জন্য)
+    if (limit) {
+      postsQuery = postsQuery.limit(parseInt(limit))
+    }
+
+    const posts = await postsQuery.exec()
     
     return NextResponse.json({ success: true, count: posts.length, data: posts })
+
   } catch (error) {
+    console.error("GET Error:", error)
     return NextResponse.json({ success: false, message: "Error fetching posts" }, { status: 500 })
   }
 }
 
 /* ============================
-   CREATE A NEW BLOG POST
+   POST METHOD (Create)
 ============================ */
 export async function POST(req: Request) {
   await connectDB()
   try {
     const body = await req.json()
-    
-    // এখানে image হবে Cloudinary এর URL স্ট্রিং
     const { title, slug, subtitle, content, image, category, tags, author, isPublished } = body
 
-    // বেসিক ভ্যালিডেশন
     if (!title || !slug || !content) {
       return NextResponse.json(
         { success: false, message: "Title, Slug, and Content are required" },
@@ -76,7 +91,6 @@ export async function POST(req: Request) {
       )
     }
 
-    // স্লাগ ডুপ্লিকেট চেক
     const existingPost = await BlogPost.findOne({ slug })
     if (existingPost) {
       return NextResponse.json({ success: false, message: "This slug already exists" }, { status: 400 })
@@ -87,7 +101,7 @@ export async function POST(req: Request) {
       slug,
       subtitle: subtitle || "",
       content,
-      image: image || "", // Cloudinary URL
+      image: image || "",
       category: category || "Uncategorized",
       tags: tags || [],
       author: author || "Admin",
@@ -100,13 +114,12 @@ export async function POST(req: Request) {
       data: newPost,
     })
   } catch (error) {
-    console.error("Create Error:", error)
     return NextResponse.json({ success: false, message: "Server Error" }, { status: 500 })
   }
 }
 
 /* ============================
-   UPDATE BLOG POST
+   PUT METHOD (Update)
 ============================ */
 export async function PUT(req: Request) {
   await connectDB()
@@ -120,35 +133,22 @@ export async function PUT(req: Request) {
 
     const updatedPost = await BlogPost.findByIdAndUpdate(
       id,
-      {
-        title,
-        slug,
-        subtitle,
-        content,
-        image,
-        category,
-        tags,
-        isPublished,
-      },
-      { new: true } // আপডেটেড ডাটা রিটার্ন করবে
+      { title, slug, subtitle, content, image, category, tags, isPublished },
+      { new: true }
     )
 
     if (!updatedPost) {
       return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Blog post updated",
-      data: updatedPost,
-    })
+    return NextResponse.json({ success: true, message: "Blog updated", data: updatedPost })
   } catch (error) {
     return NextResponse.json({ success: false, message: "Update failed" }, { status: 500 })
   }
 }
 
 /* ============================
-   DELETE BLOG POST
+   DELETE METHOD
 ============================ */
 export async function DELETE(req: Request) {
   await connectDB()
@@ -166,10 +166,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, message: "Post not found" }, { status: 404 })
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Blog post deleted successfully",
-    })
+    return NextResponse.json({ success: true, message: "Deleted successfully" })
   } catch (error) {
     return NextResponse.json({ success: false, message: "Delete failed" }, { status: 500 })
   }
