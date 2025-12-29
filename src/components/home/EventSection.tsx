@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { 
   Calendar, 
   Clock, 
-//   MapPin, 
+  MapPin, 
   ArrowRight, 
   X, 
   Ticket,
